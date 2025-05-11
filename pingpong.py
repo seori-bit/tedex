@@ -1,5 +1,5 @@
 from pygame import *
-from random import randint
+from random import *
 
 font.init()
 font1 = font.Font(None, 80)
@@ -34,10 +34,29 @@ class Player(GameSprite):
             self.rect.y -= self.speed
         if keys[K_s] and self.rect.y < win_width - 80:
             self.rect.y += self.speed
-        
+
+
+def bounce_paddle(paddle):
+    global SPEED_Y, SPEED_X
+    rel_intersect_y = (ball.rect.centery - paddle.rect.centery) / (paddle.rect.height / 2)
+    SPEED_Y = rel_intersect_y * abs(SPEED_X)
+    SPEED_X = - SPEED_X * ACCELERATION
+
+    SPEED_Y = max(-MAX_SPEED, min(MAX_SPEED,SPEED_Y))
+    SPEED_X = max(-MAX_SPEED, min(MAX_SPEED,SPEED_X))        
 racket1 = Player(racket_img, 30, 200, 4, 50, 8)
 racket2 = Player(racket_img, 470, 200, 4, 50, 8)
 ball = GameSprite(ball_img, 250, 250, 50, 50, 15)
+
+
+def ball_reset(direction):
+    global SPEED_Y, SPEED_X
+    ball.rect.center = (win_height // 2, win_width // 2)
+    SPEED_X = direction * INIT_SPEED
+    SPEED_Y = uniform(-2, 2)
+
+
+
 
 win_width = 500
 win_height = 500
@@ -49,8 +68,15 @@ window.fill(back)
 finish = False
 run = True
 
-speed_x = 3
-speed_y = 3
+
+WIN_SCORE = 2
+score1, score2 = 0, 0
+INIT_SPEED = 4
+MAX_SPEED = 8
+ACCELERATION = 1.05
+
+SPEED_X = INIT_SPEED * choice((-1,1))
+SPEED_Y = uniform(-2, 2)
 
 
 while run:
@@ -62,23 +88,35 @@ while run:
         window.fill(back)
         racket1.update_l()
         racket2.update_r()
-        ball.rect.x += speed_x
-        ball.rect.y += speed_y
+        ball.rect.x += SPEED_X
+        ball.rect.y += SPEED_Y
 
-        if sprite.collide_rect(racket1, ball) or sprite.collide_rect(racket2, ball):
-            speed_x *= -1
+
+        if sprite.collide_rect(racket1, ball):
+            bounce_paddle(racket1)
+
+
+        if sprite.collide_rect(racket2, ball):
+            bounce_paddle(racket2)
 
         if ball.rect.y > 450 or ball.rect.y < 0:
-            speed_y *= -1
+            score += 1
+            if score2 >= WIN_SCORE:
+                finish = True
+            else:
+                ball_reset(1)
 
         if ball.rect.x < 0:
             finish = True
             window.blit(win1, (50, 250))
 
         if ball.rect.x > win_width:
-            finish = True
-            window.blit(win2, (50, 250))
-            run = False
+            score += 1
+            if score >= WIN_SCORE:
+                finish = True
+                window.blit(win1, (250,250))
+            else:
+                ball_reset(-1)
 
         ball.reset()
         racket2.reset()
